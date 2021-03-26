@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
+	"regexp"
 )
 
 func loadSystem() string {
@@ -34,4 +36,18 @@ func loadBackup() string {
 func saveBackup(content string) error {
 	file := hostsFile() + ".bak"
 	return ioutil.WriteFile(file, []byte(content), os.ModePerm)
+}
+
+func validateName(name string, group *HostsGroup) error {
+	reg := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	match := reg.Match([]byte(name))
+	if !match {
+		return errors.New("Name can only contains [a-zA-Z0-9_]")
+	}
+	for _, item := range group.Items {
+		if item.GetName() == name {
+			return errors.New("Name already exist")
+		}
+	}
+	return nil
 }

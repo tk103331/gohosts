@@ -3,67 +3,75 @@ package main
 import "strings"
 
 func NewHostsItem(name string) *HostsItem {
-	return &HostsItem{name: name}
+	return &HostsItem{Name: name}
 }
 
 func NewHostsGroup(name string) *HostsGroup {
-	return &HostsGroup{name: name}
+	group := &HostsGroup{}
+	group.HostsItem = NewHostsItem(name)
+	return group
 }
 
 type Hosts interface {
-	Name() string
-	Content() string
+	GetName() string
+	GetContent() string
 	SetContent(string)
 	IsEnable() bool
-	SetEnable(b bool)
+	SetEnable(bool)
 	IsGroup() bool
+	GetGroup() *HostsGroup
+	SetGroup(*HostsGroup)
 }
 
 type HostsItem struct {
-	name    string
-	content string
-	enable  bool
+	Name    string
+	Content string
+	Enable  bool
+	group   *HostsGroup
 }
 
-func (i *HostsItem) Name() string {
-	return i.name
+func (i *HostsItem) GetName() string {
+	return i.Name
 }
 
-func (i *HostsItem) Content() string {
-	return i.content
+func (i *HostsItem) GetContent() string {
+	return i.Content
 }
 
 func (i *HostsItem) SetContent(content string) {
-	i.content = content
+	i.Content = content
 }
 
 func (i *HostsItem) IsEnable() bool {
-	return i.enable
+	return i.Enable
 }
 
 func (i *HostsItem) SetEnable(b bool) {
-	i.enable = b
+	i.Enable = b
 }
 
 func (i *HostsItem) IsGroup() bool {
 	return false
 }
 
+func (i *HostsItem) GetGroup() *HostsGroup {
+	return i.group
+}
+
+func (i *HostsItem) SetGroup(group *HostsGroup) {
+	i.group = group
+}
+
 type HostsGroup struct {
-	name   string
-	items  []Hosts
-	enable bool
+	*HostsItem
+	Items []Hosts
 }
 
-func (g *HostsGroup) Name() string {
-	return g.name
-}
-
-func (g *HostsGroup) Content() string {
+func (g *HostsGroup) GetContent() string {
 	content := ""
-	for _, item := range g.items {
+	for _, item := range g.Items {
 		if item.IsEnable() {
-			content = content + "\n#" + item.Name() + "\n" + item.Content()
+			content = content + "\n#" + item.GetName() + "\n" + item.GetContent()
 		}
 	}
 	return content
@@ -73,32 +81,28 @@ func (g *HostsGroup) SetContent(string) {
 
 }
 
-func (g *HostsGroup) IsEnable() bool {
-	return g.enable
-}
-
-func (i *HostsGroup) SetEnable(b bool) {
-	i.enable = b
-}
-
 func (g *HostsGroup) IsGroup() bool {
 	return true
 }
 
 func (g *HostsGroup) Add(item Hosts) {
-	g.items = append(g.items, item)
+	item.SetGroup(g)
+	g.Items = append(g.Items, item)
 }
 
 func (g *HostsGroup) RemoveIndex(index int) Hosts {
-	item := g.items[index]
-	g.items = append(g.items[:index], g.items[index:]...)
+	if index < 0 || index >= len(g.Items) {
+		return nil
+	}
+	item := g.Items[index]
+	g.Items = append(g.Items[:index], g.Items[index+1:]...)
 	return item
 }
 
 func (g *HostsGroup) Remove(name string) Hosts {
 	index := -1
-	for i, item := range g.items {
-		if item.Name() == name {
+	for i, item := range g.Items {
+		if item.GetName() == name {
 			index = i
 			break
 		}
@@ -110,19 +114,19 @@ func (g *HostsGroup) Remove(name string) Hosts {
 }
 
 func (g *HostsGroup) ItemNames() []string {
-	names := make([]string, len(g.items))
-	for i, it := range g.items {
-		if g.name == "" {
-			names[i] = it.Name()
+	names := make([]string, len(g.Items))
+	for i, it := range g.Items {
+		if g.Name == "" {
+			names[i] = it.GetName()
 		} else {
-			names[i] = g.name + "." + it.Name()
+			names[i] = g.Name + "." + it.GetName()
 		}
 	}
 	return names
 }
 
 func (g *HostsGroup) ItemIndex(index int) Hosts {
-	item := g.items[index]
+	item := g.Items[index]
 	return item
 }
 
@@ -131,8 +135,8 @@ func (g *HostsGroup) Item(name string) Hosts {
 		return g
 	}
 	strs := strings.SplitN(name, ".", 2)
-	for _, it := range g.items {
-		if it.Name() == strs[0] {
+	for _, it := range g.Items {
+		if it.GetName() == strs[0] {
 			if len(strs) == 1 {
 				return it
 			} else if group, ok := it.(*HostsGroup); it.IsGroup() && ok {

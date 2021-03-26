@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"log"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -9,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"log"
 )
 
 type Window struct {
@@ -18,27 +19,42 @@ type Window struct {
 
 	tree   *widget.Tree
 	editor *widget.Entry
+	status *widget.Label
 
 	current Hosts
-	hosts   HostsGroup
+	hosts   *HostsGroup
 }
 
 func Run() {
 	myApp := app.New()
 	win := myApp.NewWindow("Go Hosts!")
 
-	root := HostsGroup{items: make([]Hosts, 0)}
+	root := NewHostsGroup("")
 	data := myApp.Preferences().String("hosts")
 
-	_ = json.Unmarshal([]byte(data), &root.items)
+	_ = json.Unmarshal([]byte(data), &root.Items)
 	root.Add(NewHostsItem("System"))
-	root.Add(NewHostsItem("Backup"))
+
+	backup := NewHostsItem("Backup")
+	root.Add(backup)
 	(&Window{app: myApp, win: win, hosts: root}).Run()
+
+
+	system := loadSystem()
+	backup.SetContent(system)
 }
 
 func (w *Window) Run() {
 
 	w.init()
+
+	system := loadSystem()
+	err := saveBackup(system)
+	if err != nil {
+		log.Println(err)
+		dialog.NewInformation("Error", "Saving backup file error!\n"+err.Error(), w.win).Show()
+	}
+
 	w.win.ShowAndRun()
 }
 
@@ -53,13 +69,17 @@ func (w *Window) save() {
 		dialog.NewInformation("Error", "Saving backup file error!\n"+err.Error(), w.win).Show()
 		return
 	}
-	content := w.hosts.Content()
+	content := w.hosts.GetContent()
+	if content == "" {
+		return
+	}
 	err = saveSystem(content)
 	if err != nil {
 		log.Println(err)
 		dialog.NewInformation("Error", "Saving system hosts file error!\n"+err.Error(), w.win)
 		return
 	}
+	w.showStatus("Save success!")
 }
 
 func (w *Window) init() {
@@ -68,10 +88,13 @@ func (w *Window) init() {
 	editor := w.createEditor()
 	tree := w.createTree()
 
+	statusLabel := widget.NewLabel("Ready")
+
 	w.tree = tree
 	w.editor = editor
+	w.status = statusLabel
 
-	statusBar := container.NewHBox(widget.NewLabel(" "))
+	statusBar := container.NewHBox(statusLabel)
 	center := container.NewHSplit(container.NewBorder(nil, nil, nil, nil, tree),
 		container.New(layout.NewPaddedLayout(), editor))
 	content := container.NewBorder(toolbar, statusBar, nil, nil, center)
@@ -85,11 +108,15 @@ func (w *Window) init() {
 func (w *Window) createToolbar() *widget.Toolbar {
 	toolbar := widget.NewToolbar(widget.NewToolbarAction(theme.DocumentIcon(), func() {
 		input := widget.NewEntry()
-		input.PlaceHolder = "Please input hosts item name"
-		dlg := dialog.NewForm("New Hosts Item", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", input)}, func(b bool) {
+		input.PlaceHolder = "Please input hosts item Name"
+		input.Validator = func(s string) error {
+			return validateName(s, w.hosts)
+		}
+		dlg := dialog.NewForm("New Hosts Item", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("GetName", input)}, func(b bool) {
 			if b {
 				w.hosts.Add(NewHostsItem(input.Text))
 				w.tree.Refresh()
+				w.showStatus("Create success!")
 			}
 		}, w.win)
 		dlg.Resize(fyne.NewSize(300, 100))
@@ -97,11 +124,15 @@ func (w *Window) createToolbar() *widget.Toolbar {
 	}),
 		widget.NewToolbarAction(theme.FolderIcon(), func() {
 			input := widget.NewEntry()
-			input.PlaceHolder = "Please input hosts group name"
-			dlg := dialog.NewForm("New Hosts Group", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", input)}, func(b bool) {
+			input.PlaceHolder = "Please input hosts group Name"
+			input.Validator = func(s string) error {
+				return validateName(s, w.hosts)
+			}
+			dlg := dialog.NewForm("New Hosts GetGroup", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("GetName", input)}, func(b bool) {
 				if b {
 					w.hosts.Add(NewHostsGroup(input.Text))
 					w.tree.Refresh()
+					w.showStatus("Create success!")
 				}
 			}, w.win)
 
@@ -117,13 +148,10 @@ func (w *Window) createToolbar() *widget.Toolbar {
 
 func (w *Window) createEditor() *widget.Entry {
 	editor := widget.NewMultiLineEntry()
-	editor.OnChanged = func(s string) {
-		if w.current != nil {
-			item, ok := w.current.(*HostsItem)
-			if ok && !item.IsGroup() && item.Name() != "System" && item.Name() != "Backup" {
-				item.SetContent(w.editor.Text)
-			}
-		}
-	}
+
 	return editor
+}
+
+func (w *Window) showStatus(status string) {
+	w.status.SetText(status)
 }
