@@ -13,9 +13,9 @@ The gohosts is a useful system hosts file editing tool. It is implemented with g
 - Switch to enable the HostsItem (the hosts fragment).
 - Use HostsGroup to manage multiple HostsItem.
 
-### Snapshot
+### Screenshot
 
-![](./snapshot.jpeg)
+![](./screenshot.jpeg)
 
 ### Building
 
