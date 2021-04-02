@@ -22,4 +22,4 @@ jobs:
       run: go get fyne.io/fyne/v2/cmd/fyne
 
     - name: Package
-      run: fync package -os linux -release -icon logo.icon
+      run: fyne package -os linux -release -icon logo.icon
