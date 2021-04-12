@@ -64,7 +64,8 @@ func (i *HostsItem) SetGroup(group *HostsGroup) {
 
 type HostsGroup struct {
 	*HostsItem
-	Items []Hosts
+	Items     []Hosts
+	Exclusive bool
 }
 
 func (g *HostsGroup) GetContent() string {

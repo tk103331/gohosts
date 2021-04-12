@@ -45,8 +45,14 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 
 	check.(*widget.Check).Checked = hosts.IsEnable()
 	check.(*widget.Check).OnChanged = func(b bool) {
+		if hosts.GetGroup().Exclusive {
+			for _, it := range hosts.GetGroup().Items {
+				it.SetEnable(false)
+			}
+		}
 		hosts.SetEnable(b)
 		win.save()
+		win.tree.Refresh()
 	}
 	add.(*widget.Button).Hidden = !hosts.IsGroup()
 	add.(*widget.Button).OnTapped = func() {

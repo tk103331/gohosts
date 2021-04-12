@@ -39,7 +39,6 @@ func Run() {
 	root.Add(backup)
 	(&Window{app: myApp, win: win, hosts: root}).Run()
 
-
 	system := loadSystem()
 	backup.SetContent(system)
 }
@@ -112,7 +111,7 @@ func (w *Window) createToolbar() *widget.Toolbar {
 		input.Validator = func(s string) error {
 			return validateName(s, w.hosts)
 		}
-		dlg := dialog.NewForm("New Hosts Item", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("GetName", input)}, func(b bool) {
+		dlg := dialog.NewForm("New Hosts Item", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", input)}, func(b bool) {
 			if b {
 				w.hosts.Add(NewHostsItem(input.Text))
 				w.tree.Refresh()
@@ -128,13 +127,20 @@ func (w *Window) createToolbar() *widget.Toolbar {
 			input.Validator = func(s string) error {
 				return validateName(s, w.hosts)
 			}
-			dlg := dialog.NewForm("New Hosts GetGroup", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("GetName", input)}, func(b bool) {
-				if b {
-					w.hosts.Add(NewHostsGroup(input.Text))
-					w.tree.Refresh()
-					w.showStatus("Create success!")
-				}
-			}, w.win)
+			check := widget.NewCheck("Exclusive", nil)
+			dlg := dialog.NewForm("New Hosts GetGroup", "Ok", "Cancel",
+				[]*widget.FormItem{
+					widget.NewFormItem("Name", input),
+					widget.NewFormItem("", check)},
+				func(b bool) {
+					if b {
+						group := NewHostsGroup(input.Text)
+						group.Exclusive = check.Checked
+						w.hosts.Add(group)
+						w.tree.Refresh()
+						w.showStatus("Create success!")
+					}
+				}, w.win)
 
 			dlg.Resize(fyne.NewSize(300, 100))
 			dlg.Show()
