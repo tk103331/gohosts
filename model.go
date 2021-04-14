@@ -27,7 +27,7 @@ func (h *Hosts) Parent() *Hosts {
 
 func (h *Hosts) GetContent() string {
 	if h.IsGroup {
-		content := ""
+		content := "#[group]" + h.Name
 		for _, item := range h.Items {
 			if item.Enable {
 				content = content + "\n#" + item.Name + "\n" + item.GetContent()
@@ -85,10 +85,13 @@ func (h *Hosts) Item(name string) *Hosts {
 		return h
 	}
 	for _, it := range h.Items {
-		if it.IsGroup {
-			return it.Item(name)
-		} else if it.Name == name {
+		if it.Name == name {
 			return it
+		} else if it.IsGroup {
+			item := it.Item(name)
+			if item != nil {
+				return item
+			}
 		}
 	}
 	return nil

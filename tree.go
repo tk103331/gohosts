@@ -26,6 +26,9 @@ func createNode(bracnh bool) *fyne.Container {
 
 func updateNode(win *Window, box *fyne.Container, name string) {
 	hosts := win.root.Item(name)
+	if hosts == nil {
+		return
+	}
 	check := box.Objects[0]
 	label := box.Objects[2]
 	add := box.Objects[4]
@@ -42,7 +45,6 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 	if name == "Backup" {
 		del.Hide()
 	}
-
 	check.(*widget.Check).Checked = hosts.Enable
 	check.(*widget.Check).OnChanged = func(b bool) {
 		if hosts.Parent().Exclusive {
@@ -51,7 +53,6 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 			}
 		}
 		hosts.Enable = b
-		win.save()
 	}
 	add.(*widget.Button).Hidden = !hosts.IsGroup
 	add.(*widget.Button).OnTapped = func() {
@@ -66,6 +67,7 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 		dialog.NewForm("Add Hosts Item to group ["+hosts.Name+"]", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", entry)}, func(b bool) {
 			if b {
 				hosts.Add(NewHostsItem(entry.Text))
+				win.tree.Refresh()
 				win.showStatus("Create success!")
 			}
 		}, win.win).Show()
@@ -78,6 +80,7 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 		dialog.NewConfirm("Confirm", info, func(b bool) {
 			if b {
 				hosts.Parent().Remove(hosts.Name)
+				win.tree.Refresh()
 				win.showStatus("Remove success")
 			}
 		}, win.win).Show()

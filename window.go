@@ -136,6 +136,7 @@ func (w *Window) createToolbar() *widget.Toolbar {
 						group := NewHostsGroup(input.Text)
 						group.Exclusive = check.Checked
 						w.root.Add(group)
+						w.tree.Refresh()
 						w.showStatus("Create success!")
 					}
 				}, w.win)
