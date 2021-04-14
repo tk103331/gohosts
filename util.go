@@ -44,10 +44,10 @@ func validateName(name string, group *Hosts) error {
 	if !match {
 		return errors.New("Name can only contains [a-zA-Z0-9_]")
 	}
-	for _, item := range group.Items {
-		if item.Name == name {
-			return errors.New("Name already exist")
-		}
+
+	if group.Item(name) != nil {
+		return errors.New("Name already exist")
 	}
+
 	return nil
 }
