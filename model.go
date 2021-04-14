@@ -1,148 +1,94 @@
 package main
 
-import "strings"
-
-func NewHostsItem(name string) *HostsItem {
-	return &HostsItem{Name: name}
+func NewHostsItem(name string) *Hosts {
+	return &Hosts{Name: name, IsGroup: false}
 }
 
-func NewHostsGroup(name string) *HostsGroup {
-	group := &HostsGroup{}
-	group.HostsItem = NewHostsItem(name)
+func NewHostsGroup(name string) *Hosts {
+	group := &Hosts{Name: name, IsGroup: true}
+	group.Items = make([]*Hosts,0)
 	return group
 }
 
-type Hosts interface {
-	GetName() string
-	GetContent() string
-	SetContent(string)
-	IsEnable() bool
-	SetEnable(bool)
-	IsGroup() bool
-	GetGroup() *HostsGroup
-	SetGroup(*HostsGroup)
-}
 
-type HostsItem struct {
+type Hosts struct {
 	Name    string
 	Content string
 	Enable  bool
-	group   *HostsGroup
-}
-
-func (i *HostsItem) GetName() string {
-	return i.Name
-}
-
-func (i *HostsItem) GetContent() string {
-	return i.Content
-}
-
-func (i *HostsItem) SetContent(content string) {
-	i.Content = content
-}
-
-func (i *HostsItem) IsEnable() bool {
-	return i.Enable
-}
-
-func (i *HostsItem) SetEnable(b bool) {
-	i.Enable = b
-}
-
-func (i *HostsItem) IsGroup() bool {
-	return false
-}
-
-func (i *HostsItem) GetGroup() *HostsGroup {
-	return i.group
-}
-
-func (i *HostsItem) SetGroup(group *HostsGroup) {
-	i.group = group
-}
-
-type HostsGroup struct {
-	*HostsItem
-	Items     []Hosts
+	Items     []*Hosts
 	Exclusive bool
+	IsGroup bool
+	parent   *Hosts
 }
 
-func (g *HostsGroup) GetContent() string {
-	content := ""
-	for _, item := range g.Items {
-		if item.IsEnable() {
-			content = content + "\n#" + item.GetName() + "\n" + item.GetContent()
+func (h *Hosts) Parent() *Hosts {
+	return h.parent
+}
+
+func (h *Hosts) GetContent() string {
+	if h.IsGroup {
+		content := ""
+		for _, item := range h.Items {
+			if item.Enable {
+				content = content + "\n#" + item.Name + "\n" + item.GetContent()
+			}
 		}
+		return content
+	} else {
+		return h.Content
 	}
-	return content
 }
 
-func (g *HostsGroup) SetContent(string) {
-
+func (h *Hosts) Add(item *Hosts) {
+	item.parent = h
+	h.Items = append(h.Items, item)
 }
 
-func (g *HostsGroup) IsGroup() bool {
-	return true
-}
-
-func (g *HostsGroup) Add(item Hosts) {
-	item.SetGroup(g)
-	g.Items = append(g.Items, item)
-}
-
-func (g *HostsGroup) RemoveIndex(index int) Hosts {
-	if index < 0 || index >= len(g.Items) {
+func (h *Hosts) RemoveIndex(index int) *Hosts {
+	if index < 0 || index >= len(h.Items) {
 		return nil
 	}
-	item := g.Items[index]
-	g.Items = append(g.Items[:index], g.Items[index+1:]...)
+	item := h.Items[index]
+	h.Items = append(h.Items[:index], h.Items[index+1:]...)
 	return item
 }
 
-func (g *HostsGroup) Remove(name string) Hosts {
+func (h *Hosts) Remove(name string) *Hosts {
 	index := -1
-	for i, item := range g.Items {
-		if item.GetName() == name {
+	for i, item := range h.Items {
+		if item.Name == name {
 			index = i
 			break
 		}
 	}
 	if index != -1 {
-		return g.RemoveIndex(index)
+		return h.RemoveIndex(index)
 	}
 	return nil
 }
 
-func (g *HostsGroup) ItemNames() []string {
-	names := make([]string, len(g.Items))
-	for i, it := range g.Items {
-		if g.Name == "" {
-			names[i] = it.GetName()
-		} else {
-			names[i] = g.Name + "." + it.GetName()
-		}
+func (h *Hosts) ItemNames() []string {
+	names := make([]string, len(h.Items))
+	for i, it := range h.Items {
+		names[i] = it.Name
 	}
 	return names
 }
 
-func (g *HostsGroup) ItemIndex(index int) Hosts {
-	item := g.Items[index]
+func (h *Hosts) ItemIndex(index int) *Hosts {
+	item := h.Items[index]
 	return item
 }
 
-func (g *HostsGroup) Item(name string) Hosts {
+func (h *Hosts) Item(name string) *Hosts {
 	if name == "" {
-		return g
+		return h
 	}
-	strs := strings.SplitN(name, ".", 2)
-	for _, it := range g.Items {
-		if it.GetName() == strs[0] {
-			if len(strs) == 1 {
-				return it
-			} else if group, ok := it.(*HostsGroup); it.IsGroup() && ok {
-				return group.Item(strs[1])
-			}
+	for _, it := range h.Items {
+		if it.IsGroup {
+			return it.Item(name)
+		} else if it.Name == name {
+			return it
 		}
 	}
 	return nil

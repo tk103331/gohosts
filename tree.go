@@ -25,13 +25,13 @@ func createNode(bracnh bool) *fyne.Container {
 }
 
 func updateNode(win *Window, box *fyne.Container, name string) {
-	hosts := win.hosts.Item(name)
+	hosts := win.root.Item(name)
 	check := box.Objects[0]
 	label := box.Objects[2]
 	add := box.Objects[4]
 	del := box.Objects[5]
 
-	label.(*widget.Label).Text = hosts.GetName()
+	label.(*widget.Label).Text = hosts.Name
 	if name == "System" {
 		check.Hide()
 		add.Hide()
@@ -43,46 +43,41 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 		del.Hide()
 	}
 
-	check.(*widget.Check).Checked = hosts.IsEnable()
+	check.(*widget.Check).Checked = hosts.Enable
 	check.(*widget.Check).OnChanged = func(b bool) {
-		if hosts.GetGroup().Exclusive {
-			for _, it := range hosts.GetGroup().Items {
-				it.SetEnable(false)
+		if hosts.Parent().Exclusive {
+			for _, it := range hosts.Parent().Items {
+				it.Enable = false
 			}
 		}
-		hosts.SetEnable(b)
+		hosts.Enable = b
 		win.save()
-		win.tree.Refresh()
 	}
-	add.(*widget.Button).Hidden = !hosts.IsGroup()
+	add.(*widget.Button).Hidden = !hosts.IsGroup
 	add.(*widget.Button).OnTapped = func() {
-		group, ok := hosts.(*HostsGroup)
-		if !ok {
+		if !hosts.IsGroup {
 			return
 		}
 		entry := widget.NewEntry()
 		entry.PlaceHolder = "Please input hosts item Name"
 		entry.Validator = func(s string) error {
-			return validateName(s, group)
+			return validateName(s, hosts)
 		}
-		dialog.NewForm("Add Hosts Item to group ["+group.GetName()+"]", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("GetName", entry)}, func(b bool) {
+		dialog.NewForm("Add Hosts Item to group ["+hosts.Name+"]", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", entry)}, func(b bool) {
 			if b {
-
-				group.Add(NewHostsItem(entry.Text))
-				win.tree.Refresh()
+				hosts.Add(NewHostsItem(entry.Text))
 				win.showStatus("Create success!")
 			}
 		}, win.win).Show()
 	}
 	del.(*widget.Button).OnTapped = func() {
 		info := "Confirm to delete the hosts item"
-		if hosts.IsGroup() {
+		if hosts.IsGroup {
 			info = "Confirm to delete the hosts group"
 		}
 		dialog.NewConfirm("Confirm", info, func(b bool) {
 			if b {
-				hosts.GetGroup().Remove(hosts.GetName())
-				win.tree.Refresh()
+				hosts.Parent().Remove(hosts.Name)
 				win.showStatus("Remove success")
 			}
 		}, win.win).Show()
@@ -92,17 +87,17 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 func (w *Window) createTree() *widget.Tree {
 
 	tree := widget.NewTree(func(id widget.TreeNodeID) []widget.TreeNodeID {
-		h := w.hosts.Item(id)
+		h := w.root.Item(id)
 		if h != nil {
-			if h.IsGroup() {
-				return h.(*HostsGroup).ItemNames()
+			if h.IsGroup {
+				return h.ItemNames()
 			}
 		}
 		return nil
 	}, func(id widget.TreeNodeID) bool {
-		h := w.hosts.Item(id)
+		h := w.root.Item(id)
 		if h != nil {
-			return h.IsGroup()
+			return h.IsGroup
 		}
 		return false
 	}, func(branch bool) fyne.CanvasObject {
@@ -117,14 +112,14 @@ func (w *Window) createTree() *widget.Tree {
 		if id == "System" {
 			w.editor.SetText(loadSystem())
 		} else {
-			hosts := w.hosts.Item(id)
-			w.current = hosts
+			hosts := w.root.Item(id)
+
 			if hosts != nil {
 				w.editor.SetText(hosts.GetContent())
-				if !hosts.IsGroup() {
+				if !hosts.IsGroup {
 					w.editor.Enable()
 					w.editor.OnChanged = func(s string) {
-						hosts.SetContent(s)
+						hosts.Content = s
 					}
 				}
 			}

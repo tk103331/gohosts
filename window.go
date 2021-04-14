@@ -21,26 +21,25 @@ type Window struct {
 	editor *widget.Entry
 	status *widget.Label
 
-	current Hosts
-	hosts   *HostsGroup
+	root   *Hosts
 }
 
+const _PREFS_KEY = "hosts"
 func Run() {
 	myApp := app.New()
 	win := myApp.NewWindow("Go Hosts!")
 
 	root := NewHostsGroup("")
-	data := myApp.Preferences().String("hosts")
+	data := myApp.Preferences().String(_PREFS_KEY)
 
 	_ = json.Unmarshal([]byte(data), &root.Items)
 	root.Add(NewHostsItem("System"))
 
 	backup := NewHostsItem("Backup")
+	backup.Content = loadSystem()
 	root.Add(backup)
-	(&Window{app: myApp, win: win, hosts: root}).Run()
 
-	system := loadSystem()
-	backup.SetContent(system)
+	(&Window{app: myApp, win: win, root: root}).Run()
 }
 
 func (w *Window) Run() {
@@ -58,8 +57,8 @@ func (w *Window) Run() {
 }
 
 func (w *Window) save() {
-	data, _ := json.Marshal(w.hosts)
-	w.app.Preferences().SetString("hosts", string(data))
+	data, _ := json.Marshal(w.root.Items)
+	w.app.Preferences().SetString(_PREFS_KEY, string(data))
 
 	system := loadSystem()
 	err := saveBackup(system)
@@ -68,7 +67,7 @@ func (w *Window) save() {
 		dialog.NewInformation("Error", "Saving backup file error!\n"+err.Error(), w.win).Show()
 		return
 	}
-	content := w.hosts.GetContent()
+	content := w.root.GetContent()
 	if content == "" {
 		return
 	}
@@ -109,11 +108,11 @@ func (w *Window) createToolbar() *widget.Toolbar {
 		input := widget.NewEntry()
 		input.PlaceHolder = "Please input hosts item Name"
 		input.Validator = func(s string) error {
-			return validateName(s, w.hosts)
+			return validateName(s, w.root)
 		}
 		dlg := dialog.NewForm("New Hosts Item", "Ok", "Cancel", []*widget.FormItem{widget.NewFormItem("Name", input)}, func(b bool) {
 			if b {
-				w.hosts.Add(NewHostsItem(input.Text))
+				w.root.Add(NewHostsItem(input.Text))
 				w.tree.Refresh()
 				w.showStatus("Create success!")
 			}
@@ -125,10 +124,10 @@ func (w *Window) createToolbar() *widget.Toolbar {
 			input := widget.NewEntry()
 			input.PlaceHolder = "Please input hosts group Name"
 			input.Validator = func(s string) error {
-				return validateName(s, w.hosts)
+				return validateName(s, w.root)
 			}
 			check := widget.NewCheck("Exclusive", nil)
-			dlg := dialog.NewForm("New Hosts GetGroup", "Ok", "Cancel",
+			dlg := dialog.NewForm("New Hosts Group", "Ok", "Cancel",
 				[]*widget.FormItem{
 					widget.NewFormItem("Name", input),
 					widget.NewFormItem("", check)},
@@ -136,8 +135,7 @@ func (w *Window) createToolbar() *widget.Toolbar {
 					if b {
 						group := NewHostsGroup(input.Text)
 						group.Exclusive = check.Checked
-						w.hosts.Add(group)
-						w.tree.Refresh()
+						w.root.Add(group)
 						w.showStatus("Create success!")
 					}
 				}, w.win)

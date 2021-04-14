@@ -38,14 +38,14 @@ func saveBackup(content string) error {
 	return ioutil.WriteFile(file, []byte(content), os.ModePerm)
 }
 
-func validateName(name string, group *HostsGroup) error {
+func validateName(name string, group *Hosts) error {
 	reg := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 	match := reg.Match([]byte(name))
 	if !match {
 		return errors.New("Name can only contains [a-zA-Z0-9_]")
 	}
 	for _, item := range group.Items {
-		if item.GetName() == name {
+		if item.Name == name {
 			return errors.New("Name already exist")
 		}
 	}
