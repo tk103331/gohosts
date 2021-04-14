@@ -26,18 +26,27 @@ type Window struct {
 
 const _PREFS_KEY = "hosts"
 func Run() {
-	myApp := app.New()
+	myApp := app.NewWithID("com.github.tk103331.gohosts")
 	win := myApp.NewWindow("Go Hosts!")
 
 	root := NewHostsGroup("")
 	data := myApp.Preferences().String(_PREFS_KEY)
 
-	_ = json.Unmarshal([]byte(data), &root.Items)
+	items := make([]*Hosts,0)
+	_ = json.Unmarshal([]byte(data), &items)
 	root.Add(NewHostsItem("System"))
 
 	backup := NewHostsItem("Backup")
 	backup.Content = loadSystem()
 	root.Add(backup)
+
+	if len(items) > 0 {
+		for i,it := range items {
+			if i > 1 {
+				root.Add(it)
+			}
+		}
+	}
 
 	(&Window{app: myApp, win: win, root: root}).Run()
 }
