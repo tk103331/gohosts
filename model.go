@@ -1,5 +1,7 @@
 package main
 
+import "fyne.io/fyne/v2/widget"
+
 func NewHostsItem(name string) *Hosts {
 	return &Hosts{Name: name, IsGroup: false}
 }
@@ -18,7 +20,9 @@ type Hosts struct {
 	Items     []*Hosts
 	Exclusive bool
 	IsGroup bool
-	parent   *Hosts
+
+	parent *Hosts
+	radio *widget.RadioGroup
 }
 
 func (h *Hosts) Parent() *Hosts {

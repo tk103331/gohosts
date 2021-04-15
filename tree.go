@@ -10,7 +10,7 @@ import (
 )
 
 func createNode(bracnh bool) *fyne.Container {
-	check := widget.NewCheck("", nil)
+	holder := widget.NewLabel("")
 	icon := widget.NewIcon(theme.DocumentIcon())
 	if bracnh {
 		icon = widget.NewIcon(theme.FolderIcon())
@@ -21,7 +21,7 @@ func createNode(bracnh bool) *fyne.Container {
 	//edit := widget.NewButtonWithIcon("", theme.SettingsIcon(), nil)
 	del := widget.NewButtonWithIcon("", theme.DeleteIcon(), nil)
 
-	return container.NewHBox(check, icon, label, layout.NewSpacer(), add, del)
+	return container.NewHBox(holder, icon, label, layout.NewSpacer(), add, del)
 }
 
 func updateNode(win *Window, box *fyne.Container, name string) {
@@ -29,14 +29,46 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 	if hosts == nil {
 		return
 	}
-	check := box.Objects[0]
 	label := box.Objects[2]
 	add := box.Objects[4]
 	del := box.Objects[5]
 
+
+	if hosts.Parent().Exclusive {
+		radio := widget.NewRadioGroup([]string{""}, nil)
+		radio.Horizontal = true
+		box.Objects[0] = radio
+		radio.OnChanged = func(s string) {
+			for _, it := range hosts.Parent().Items {
+				it.Enable = false
+				it.radio.Selected = "nil"
+				it.radio.Refresh()
+			}
+			hosts.Enable = s == ""
+			radio.Selected = s
+			win.refreshEditor()
+		}
+		if hosts.Enable {
+			radio.Selected = ""
+		} else {
+			radio.Selected = "nil"
+		}
+
+		hosts.radio = radio
+
+	} else {
+		check := widget.NewCheck("", nil)
+		box.Objects[0] = check
+		check.Checked = hosts.Enable
+		check.OnChanged = func(b bool) {
+			hosts.Enable = b
+			win.refreshEditor()
+		}
+
+	}
 	label.(*widget.Label).Text = hosts.Name
 	if name == "System" {
-		check.Hide()
+		box.Objects[0].Hide()
 		add.Hide()
 		del.Hide()
 		return
@@ -44,15 +76,6 @@ func updateNode(win *Window, box *fyne.Container, name string) {
 
 	if name == "Backup" {
 		del.Hide()
-	}
-	check.(*widget.Check).Checked = hosts.Enable
-	check.(*widget.Check).OnChanged = func(b bool) {
-		if hosts.Parent().Exclusive {
-			for _, it := range hosts.Parent().Items {
-				it.Enable = false
-			}
-		}
-		hosts.Enable = b
 	}
 	add.(*widget.Button).Hidden = !hosts.IsGroup
 	add.(*widget.Button).OnTapped = func() {
@@ -110,13 +133,13 @@ func (w *Window) createTree() *widget.Tree {
 	})
 
 	tree.OnSelected = func(id widget.TreeNodeID) {
+		w.current = id
 		w.editor.Disable()
 		w.editor.OnChanged = func(s string) {}
 		if id == "System" {
 			w.editor.SetText(loadSystem())
 		} else {
 			hosts := w.root.Item(id)
-
 			if hosts != nil {
 				w.editor.SetText(hosts.GetContent())
 				if !hosts.IsGroup {

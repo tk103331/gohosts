@@ -21,6 +21,7 @@ type Window struct {
 	editor *widget.Entry
 	status *widget.Label
 
+	current string
 	root   *Hosts
 }
 
@@ -168,4 +169,13 @@ func (w *Window) createEditor() *widget.Entry {
 
 func (w *Window) showStatus(status string) {
 	w.status.SetText(status)
+}
+
+func (w *Window) refreshEditor() {
+	if w.current != "" {
+		it := w.root.Item(w.current)
+		if it != nil {
+			w.editor.SetText(it.GetContent())
+		}
+	}
 }
