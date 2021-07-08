@@ -36,6 +36,6 @@ The gohosts is a useful system hosts file editing tool. It is implemented with g
 
 ### TODO
 
-- Optimize interface and interaction
-- Support multiple grouping strategies (exclusive, etc.)
-- Support loading from network and file
+- Optimize interface and interaction.
+- Support multiple grouping strategies (exclusive, etc.).
+- Support loading from network and file.
